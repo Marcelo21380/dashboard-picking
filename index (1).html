@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Picking — Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── BASE ── */
+:root {
+  --bg:#0f1117; --sur:#1a1d27; --sur2:#22263a; --bor:#2e3347;
+  --acc:#4f8ef7; --grn:#22c55e; --amb:#f59e0b; --red:#ef4444; --pur:#a78bfa;
+  --txt:#e8eaf0; --mut:#7a80a0;
+  --mono:"DM Mono",monospace; --sans:"DM Sans",sans-serif;
+}
+.light-mode {
+  --bg:#f0f4fa; --sur:#ffffff; --sur2:#e8eef8; --bor:#d0d8e8;
+  --txt:#1a1d27; --mut:#6b7280;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);min-height:100vh;transition:background .3s,color .3s}
+
+/* ── HEADER ── */
+header{border-bottom:1px solid var(--bor);padding:.9rem 1.5rem;display:flex;align-items:center;justify-content:space-between;background:var(--sur);gap:1rem;flex-wrap:wrap;position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:10px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--acc);flex-shrink:0;transition:background .3s}
+.dot.live{background:var(--grn);box-shadow:0 0 0 3px rgba(34,197,94,.2)}
+h1{font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.hright{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.badge{font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--bor);color:var(--mut)}
+.badge.live{border-color:var(--grn);color:var(--grn)}
+.updated{font-family:var(--mono);font-size:11px;color:var(--mut)}
+
+/* ── BOTONES HEADER ── */
+.hbtn{background:transparent;border:1px solid var(--bor);color:var(--mut);border-radius:7px;font-family:var(--sans);font-size:12px;padding:6px 12px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.hbtn:hover{color:var(--txt);border-color:var(--mut)}
+.hbtn.active{background:var(--acc);color:#fff;border-color:var(--acc)}
+.hbtn.danger{border-color:var(--amb);color:var(--amb)}
+.hbtn.danger:hover{background:var(--amb);color:#fff}
+.spin{animation:spin .8s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── MAIN ── */
+.main{max-width:1200px;margin:0 auto;padding:1.5rem 2rem}
+
+/* ── FILTERS ── */
+.filters{background:var(--sur);border:1px solid var(--bor);border-radius:12px;padding:1rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:flex-end;gap:1rem;flex-wrap:wrap}
+.fg{display:flex;flex-direction:column;gap:5px;min-width:150px}
+.fg label{font-size:10px;font-family:var(--mono);color:var(--mut);text-transform:uppercase;letter-spacing:.06em}
+select{background:var(--sur2);border:1px solid var(--bor);color:var(--txt);font-family:var(--sans);font-size:13px;padding:7px 10px;border-radius:7px;outline:none;cursor:pointer;width:100%;transition:border .2s}
+select:focus{border-color:var(--acc)}
+.btn{background:var(--acc);color:#fff;border:none;border-radius:7px;font-family:var(--sans);font-size:13px;font-weight:500;padding:8px 18px;cursor:pointer;transition:opacity .2s;white-space:nowrap}
+.btn:hover{opacity:.85}
+.btn2{background:transparent;color:var(--mut);border:1px solid var(--bor);border-radius:7px;font-family:var(--sans);font-size:13px;padding:8px 14px;cursor:pointer;transition:all .2s}
+.btn2:hover{color:var(--txt);border-color:var(--mut)}
+
+/* ── METRICS ── */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:1rem;margin-bottom:1.5rem}
+.metric{background:var(--sur);border:1px solid var(--bor);border-radius:12px;padding:1rem 1.2rem;transition:border .2s}
+.metric.top-producer{border-color:var(--grn);box-shadow:0 0 0 1px rgba(34,197,94,.2)}
+.mlabel{font-size:10px;font-family:var(--mono);color:var(--mut);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.mval{font-size:28px;font-weight:600;line-height:1}
+.msub{font-size:11px;color:var(--mut);margin-top:4px}
+.blue{color:var(--acc)}.green{color:var(--grn)}.amber{color:var(--amb)}.purple{color:var(--pur)}.red{color:var(--red)}
+
+/* ── GRID ── */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem}
+@media(max-width:750px){.grid2{grid-template-columns:1fr}}
+.panel{background:var(--sur);border:1px solid var(--bor);border-radius:12px;padding:1.2rem 1.5rem}
+.ptitle{font-size:10px;font-family:var(--mono);color:var(--mut);text-transform:uppercase;letter-spacing:.06em;margin-bottom:1rem;display:flex;align-items:center;gap:7px}
+.ptitle::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--acc)}
+.full{grid-column:1/-1}
+.chart-wrap{position:relative;height:270px}
+
+/* ── TABLE ── */
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;padding:7px 10px;font-family:var(--mono);font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--bor)}
+tbody tr{border-bottom:1px solid var(--bor);transition:background .15s}
+tbody tr:hover{background:var(--sur2)}
+tbody tr.top-row td:nth-child(2){font-weight:700;color:var(--grn)}
+tbody td{padding:9px 10px}
+tfoot td{padding:9px 10px;font-weight:600;border-top:2px solid var(--acc);color:var(--acc);font-family:var(--mono);font-size:12px}
+.bar-wrap{display:flex;align-items:center;gap:8px}
+.bar{height:5px;border-radius:3px}
+.pct{font-family:var(--mono);font-size:12px;color:var(--acc);min-width:42px}
+.ok{display:inline-block;font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:20px;color:var(--grn);border:1px solid var(--grn);background:rgba(34,197,94,.08)}
+.warn{display:inline-block;font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:20px;color:var(--amb);border:1px solid var(--amb);background:rgba(245,158,11,.08)}
+.ratio-good{color:var(--grn);font-family:var(--mono);font-size:12px}
+.ratio-warn{color:var(--amb);font-family:var(--mono);font-size:12px}
+.ratio-bad{color:var(--red);font-family:var(--mono);font-size:12px}
+.crown{font-size:14px;margin-right:4px}
+
+/* ── ESTADO ── */
+.loading-box{text-align:center;padding:4rem 1rem;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:1rem}
+.spinner{width:36px;height:36px;border:2px solid var(--bor);border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite}
+.error-box{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:1rem 1.4rem;color:#fca5a5;font-size:13px;margin-bottom:1rem}
+
+/* ── MODO PRESENTACION ── */
+body.present-mode header .filters-wrap,
+body.present-mode .filters{display:none!important}
+body.present-mode .main{padding:.5rem 1rem}
+body.present-mode .metrics{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+body.present-mode .mval{font-size:36px}
+
+/* ── PRINT ── */
+@media print{
+  header .hright, .filters, #loading-box{display:none!important}
+  body{background:#fff!important;color:#000!important}
+  .panel,.metric{background:#fff!important;border:1px solid #ddd!important;box-shadow:none!important}
+  .main{max-width:100%;padding:.5rem}
+  .print-header{display:block!important}
+  .chart-wrap{height:220px}
+  tfoot td, thead th, .ptitle{color:#333!important}
+  .bar{background:#333!important}
+  .pct,.ratio-good,.ratio-warn,.ratio-bad{color:#333!important}
+}
+.print-header{display:none;text-align:center;padding:.5rem 0 1rem;border-bottom:2px solid #333;margin-bottom:1rem}
+.print-header h2{font-size:18px;font-weight:700}
+.print-header p{font-size:12px;color:#555;margin-top:4px}
+</style>
+</head>
+<body>
+
+<!-- PRINT HEADER (solo visible al imprimir) -->
+<div class="print-header" id="print-header">
+  <h2>CONTROL DE PICKING — REPORTE DE PRODUCCIÓN</h2>
+  <p id="print-date"></p>
+</div>
+
+<header id="main-header">
+  <div class="logo">
+    <div class="dot" id="status-dot"></div>
+    <h1>Control de Picking</h1>
+  </div>
+  <div class="hright">
+    <span class="updated" id="last-update"></span>
+    <span class="badge" id="status-badge">Cargando...</span>
+    <button class="hbtn" id="btn-refresh" onclick="cargarDatos()"><span id="ref-icon">↻</span> Actualizar</button>
+    <button class="hbtn" id="btn-present" onclick="togglePresent()" title="Modo presentación">⛶ Presentar</button>
+    <button class="hbtn" id="btn-theme" onclick="toggleTheme()" title="Cambiar tema">☀ Tema claro</button>
+    <button class="hbtn danger" onclick="imprimirPDF()" title="Imprimir / exportar PDF">⎙ Imprimir PDF</button>
+  </div>
+</header>
+
+<div class="main" id="main-content">
+  <div id="error-box" class="error-box" style="display:none"></div>
+
+  <div class="filters" id="filters" style="display:none">
+    <div class="fg"><label>Desde</label><select id="f-desde"><option value="">Todas</option></select></div>
+    <div class="fg"><label>Hasta</label><select id="f-hasta"><option value="">Todas</option></select></div>
+    <div class="fg" style="min-width:200px"><label>Colaborador</label><select id="f-colab"><option value="">Todos</option></select></div>
+    <button class="btn" onclick="render()">Aplicar</button>
+    <button class="btn2" onclick="resetFiltros()">Limpiar</button>
+  </div>
+
+  <div id="loading-box" class="loading-box panel">
+    <div class="spinner"></div>
+    <div>Conectando con Google Sheets...</div>
+  </div>
+
+  <div id="metrics" class="metrics" style="display:none">
+    <div class="metric"><div class="mlabel">Colaboradores</div><div class="mval blue" id="m-c">—</div><div class="msub">en el período</div></div>
+    <div class="metric"><div class="mlabel">Días trabajados</div><div class="mval green" id="m-d">—</div><div class="msub" id="m-d2">—</div></div>
+    <div class="metric"><div class="mlabel">Total planillas</div><div class="mval purple" id="m-p">—</div><div class="msub">registradas</div></div>
+    <div class="metric"><div class="mlabel">Total ítems</div><div class="mval purple" id="m-i">—</div><div class="msub">36 × planillas</div></div>
+    <div class="metric"><div class="mlabel">Total eventos</div><div class="mval amber" id="m-e">—</div><div class="msub">errores / incidentes</div></div>
+    <div class="metric"><div class="mlabel">Ratio Eventos/Ítems</div><div class="mval red" id="m-r">—</div><div class="msub">% global</div></div>
+  </div>
+
+  <div class="grid2" id="content" style="display:none">
+    <!-- TABLA -->
+    <div class="panel full">
+      <div class="ptitle">Consolidado por colaborador</div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Colaborador</th>
+              <th>Días</th>
+              <th>Planillas</th>
+              <th>Ítems</th>
+              <th>Eventos</th>
+              <th>% Participación</th>
+              <th>Ratio Ev/Ítems</th>
+              <th>Faltante</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+          <tfoot id="tfoot"></tfoot>
+        </table>
+      </div>
+    </div>
+    <!-- GRAFICO PARTICIPACION -->
+    <div class="panel">
+      <div class="ptitle">% participación por ítems</div>
+      <div class="chart-wrap"><canvas id="c-items"></canvas></div>
+    </div>
+    <!-- GRAFICO EVENTOS -->
+    <div class="panel">
+      <div class="ptitle">Eventos por colaborador</div>
+      <div class="chart-wrap"><canvas id="c-ev"></canvas></div>
+    </div>
+    <!-- GRAFICO RATIO -->
+    <div class="panel full">
+      <div class="ptitle">Ratio eventos / ítems por colaborador (%)</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="c-ratio"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzu8ZDDHP5LvX9288mCU0upIuoj00XNXmrHM9qHrGJbCPajluTnlsdhMyAiYib5DnRjJg/exec';
+const COLORS = ['#4f8ef7','#7c3aed','#22c55e','#f59e0b','#ef4444','#06b6d4','#ec4899','#a78bfa','#34d399','#fb923c','#60a5fa','#f472b6','#4ade80','#facc15'];
+let RAW = null;
+let cI=null, cE=null, cR=null;
+let isPresent = false;
+let isLight = false;
+
+/* ── CARGA ── */
+async function cargarDatos() {
+  const icon  = document.getElementById('ref-icon');
+  const badge = document.getElementById('status-badge');
+  const dot   = document.getElementById('status-dot');
+  icon.classList.add('spin');
+  badge.textContent = 'Actualizando...';
+  badge.className = 'badge';
+  document.getElementById('error-box').style.display = 'none';
+
+  try {
+    const res = await fetch(SCRIPT_URL);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    if (!json.data || json.data.length === 0)
+      throw new Error('Sin datos. Ejecutá instalarTrigger en Apps Script primero.');
+
+    RAW = json;
+
+    const selD = document.getElementById('f-desde');
+    const selH = document.getElementById('f-hasta');
+    const selC = document.getElementById('f-colab');
+    selD.innerHTML = '<option value="">Todas</option>' + RAW.fechas.map(f=>`<option value="${f}">${fmtF(f)}</option>`).join('');
+    selH.innerHTML = '<option value="">Todas</option>' + RAW.fechas.map(f=>`<option value="${f}">${fmtF(f)}</option>`).join('');
+    selC.innerHTML = '<option value="">Todos</option>' + RAW.colabs.map(c=>`<option value="${c}">${c}</option>`).join('');
+
+    const upd = RAW.updated ? new Date(RAW.updated).toLocaleString('es-AR') : '';
+    badge.textContent = RAW.data.length + ' registros';
+    badge.className = 'badge live';
+    dot.className = 'dot live';
+    document.getElementById('last-update').textContent = upd ? 'Act: ' + upd : '';
+    document.getElementById('loading-box').style.display = 'none';
+    document.getElementById('filters').style.display = 'flex';
+    render();
+  } catch(err) {
+    document.getElementById('loading-box').style.display = 'none';
+    const eb = document.getElementById('error-box');
+    eb.style.display = 'block';
+    eb.textContent = '⚠ ' + err.message;
+    badge.textContent = 'Error';
+    dot.className = 'dot';
+  } finally {
+    icon.classList.remove('spin');
+  }
+}
+
+function fmtF(s) {
+  if (!s) return '';
+  const [y,m,d] = s.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+/* ── RENDER ── */
+function render() {
+  if (!RAW) return;
+  const desde = document.getElementById('f-desde').value;
+  const hasta  = document.getElementById('f-hasta').value;
+  const colab  = document.getElementById('f-colab').value;
+
+  const rows = RAW.data.filter(r => {
+    if (desde && r.fecha < desde) return false;
+    if (hasta  && r.fecha > hasta)  return false;
+    if (colab  && r.colab !== colab) return false;
+    return true;
+  });
+
+  const mapa = {};
+  rows.forEach(r => {
+    if (!mapa[r.colab]) mapa[r.colab] = {plan:0, ev:0, falt:0, dias:new Set()};
+    mapa[r.colab].plan += r.planillas;
+    mapa[r.colab].ev   += r.eventos;
+    if (r.faltante === 'SI') mapa[r.colab].falt++;
+    mapa[r.colab].dias.add(r.fecha);
+  });
+
+  const colabs     = Object.keys(mapa).sort();
+  const totalPlan  = colabs.reduce((s,c) => s + mapa[c].plan, 0);
+  const totalItems = totalPlan * 36;
+  const totalEv    = colabs.reduce((s,c) => s + mapa[c].ev, 0);
+  const diasUnicos = new Set(rows.map(r => r.fecha)).size;
+  const ratioGlobal = totalItems > 0 ? (totalEv / totalItems * 100) : 0;
+
+  // Top productor
+  const topColab = colabs.reduce((a,b) => mapa[a].plan >= mapa[b].plan ? a : b, colabs[0]);
+
+  document.getElementById('m-c').textContent = colabs.length;
+  document.getElementById('m-d').textContent = diasUnicos;
+  document.getElementById('m-d2').textContent = rows.length + ' registros';
+  document.getElementById('m-p').textContent = totalPlan;
+  document.getElementById('m-i').textContent = totalItems;
+  document.getElementById('m-e').textContent = totalEv;
+  document.getElementById('m-r').textContent = ratioGlobal.toFixed(2) + '%';
+
+  /* TABLE */
+  document.getElementById('tbody').innerHTML = colabs.map((c,i) => {
+    const d     = mapa[c];
+    const items = d.plan * 36;
+    const pct   = totalPlan ? (d.plan / totalPlan * 100) : 0;
+    const ratio = items > 0 ? (d.ev / items * 100) : 0;
+    const bw    = Math.round(pct * 2.2);
+    const color = COLORS[i % COLORS.length];
+    const isTop = c === topColab;
+    const ratioClass = ratio === 0 ? 'ratio-good' : ratio < 1 ? 'ratio-warn' : 'ratio-bad';
+    return `<tr class="${isTop ? 'top-row' : ''}">
+      <td style="color:var(--mut);font-family:var(--mono);font-size:11px">${i+1}</td>
+      <td>${isTop ? '<span class="crown">👑</span>' : ''}<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin-right:7px"></span>${c}</td>
+      <td style="font-family:var(--mono)">${d.dias.size}</td>
+      <td style="font-family:var(--mono)">${d.plan}</td>
+      <td style="font-family:var(--mono)">${items}</td>
+      <td style="font-family:var(--mono);color:${d.ev>5?'var(--red)':d.ev>0?'var(--amb)':'var(--mut)'}">${d.ev}</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:${bw}px;background:${color}"></div>
+          <span class="pct">${pct.toFixed(1)}%</span>
+        </div>
+      </td>
+      <td><span class="${ratioClass}">${ratio.toFixed(2)}%</span></td>
+      <td>${d.falt>0?`<span class="warn">SI (${d.falt})</span>`:`<span class="ok">NO</span>`}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('tfoot').innerHTML = `<tr>
+    <td></td><td>TOTAL</td><td>${diasUnicos}</td><td>${totalPlan}</td><td>${totalItems}</td>
+    <td>${totalEv}</td><td><span class="pct">100%</span></td>
+    <td><span class="${ratioGlobal===0?'ratio-good':ratioGlobal<1?'ratio-warn':'ratio-bad'}">${ratioGlobal.toFixed(2)}%</span></td><td></td>
+  </tr>`;
+
+  /* CHARTS */
+  const chartCfg = (labels, datos, esPct, colorFn) => ({
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: datos,
+        backgroundColor: labels.map((_,i) => COLORS[i%COLORS.length]+'bb'),
+        borderColor:     labels.map((_,i) => COLORS[i%COLORS.length]),
+        borderWidth: 1.5, borderRadius: 6
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label: ctx => esPct?` ${ctx.raw.toFixed(2)}%`:` ${ctx.raw}`}} },
+      scales:{
+        x:{ ticks:{color:'#7a80a0',font:{size:10},maxRotation:35}, grid:{color:'#2e334744'} },
+        y:{ ticks:{color:'#7a80a0',font:{size:10},callback: v => esPct?v+'%':v}, grid:{color:'#2e334744'}, beginAtZero:true }
+      }
+    }
+  });
+
+  if(cI) cI.destroy();
+  cI = new Chart(document.getElementById('c-items').getContext('2d'),
+    chartCfg(colabs, colabs.map(c=>totalPlan?+(mapa[c].plan/totalPlan*100).toFixed(1):0), true));
+
+  if(cE) cE.destroy();
+  cE = new Chart(document.getElementById('c-ev').getContext('2d'),
+    chartCfg(colabs, colabs.map(c=>mapa[c].ev), false));
+
+  if(cR) cR.destroy();
+  cR = new Chart(document.getElementById('c-ratio').getContext('2d'),
+    chartCfg(colabs, colabs.map(c=>{ const items=mapa[c].plan*36; return items>0?+(mapa[c].ev/items*100).toFixed(2):0; }), true));
+
+  document.getElementById('metrics').style.display = 'grid';
+  document.getElementById('content').style.display  = 'grid';
+}
+
+function resetFiltros() {
+  document.getElementById('f-desde').value = '';
+  document.getElementById('f-hasta').value  = '';
+  document.getElementById('f-colab').value  = '';
+  render();
+}
+
+/* ── PRESENTACION ── */
+function togglePresent() {
+  isPresent = !isPresent;
+  document.body.classList.toggle('present-mode', isPresent);
+  const btn = document.getElementById('btn-present');
+  btn.classList.toggle('active', isPresent);
+  btn.textContent = isPresent ? '✕ Salir' : '⛶ Presentar';
+  if (isPresent && document.documentElement.requestFullscreen) {
+    document.documentElement.requestFullscreen().catch(()=>{});
+  } else if (!isPresent && document.fullscreenElement) {
+    document.exitFullscreen().catch(()=>{});
+  }
+}
+
+/* ── TEMA ── */
+function toggleTheme() {
+  isLight = !isLight;
+  document.body.classList.toggle('light-mode', isLight);
+  const btn = document.getElementById('btn-theme');
+  btn.textContent = isLight ? '🌙 Tema oscuro' : '☀ Tema claro';
+}
+
+/* ── IMPRIMIR PDF ── */
+function imprimirPDF() {
+  const now = new Date().toLocaleString('es-AR', {dateStyle:'full', timeStyle:'short'});
+  document.getElementById('print-date').textContent = 'Generado el ' + now;
+  document.getElementById('print-header').style.display = 'block';
+  window.print();
+  setTimeout(() => {
+    document.getElementById('print-header').style.display = 'none';
+  }, 1000);
+}
+
+// Carga automática
+cargarDatos();
+// Auto-refresh cada 5 minutos
+setInterval(cargarDatos, 5 * 60 * 1000);
+</script>
+</body>
+</html>
